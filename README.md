@@ -19,35 +19,38 @@ Add this to your `babel.config.js`
 
 ## Usage
 
+Simply call the `useScanBarcodes()` hook or call `scanBarcodes()` inside of the `useFrameProcessor()` hook. In both cases you will need to pass an array of `BarcodeFormat` to specify the kind of barcode you want to detect.
+
+> Note: The underlying MLKit barcode reader is only created once meaning that changes to the array will not be reflected in the app.
+
 ```js
 import * as React from 'react';
-import { runOnJS } from 'react-native-reanimated';
 
 import { StyleSheet, Text } from 'react-native';
-import {
-  useCameraDevices,
-  useFrameProcessor,
-} from 'react-native-vision-camera';
+import { useCameraDevices } from 'react-native-vision-camera';
 import { Camera } from 'react-native-vision-camera';
-import { scanQRCodes, QrCode } from 'vision-camera-qrcode-scanner';
+import { useScanBarcodes, BarcodeFormat } from 'vision-camera-qrcode-scanner';
 
 export default function App() {
   const [hasPermission, setHasPermission] = React.useState(false);
-  const [qrCodes, setQrCodes] = React.useState<QrCode[]>([]);
   const devices = useCameraDevices();
   const device = devices.back;
+  
+  const [frameProcessor, barcodes] = useScanBarcodes([BarcodeFormat.QR_CODE]);
+
+  // Alternatively you can use the underlying function:
+  // 
+  // const frameProcessor = useFrameProcessor((frame) => {
+  //   'worklet';
+  //   const detectedBarcodes = scanBarcodes(frame, [BarcodeFormat.QR_CODE]);
+  //   runOnJS(setBarcodes)(detectedBarcodes);
+  // }, []);
 
   React.useEffect(() => {
     (async () => {
       const status = await Camera.requestCameraPermission();
       setHasPermission(status === 'authorized');
     })();
-  }, []);
-
-  const frameProcessor = useFrameProcessor((frame) => {
-    'worklet';
-    const qrcode = scanQRCodes(frame);
-    runOnJS(setQrCodes)(qrcode);
   }, []);
 
   return (
@@ -61,18 +64,18 @@ export default function App() {
           frameProcessor={frameProcessor}
           frameProcessorFps={5}
         />
-        {qrCodes.map((qrcode, idx) => (
-          <Text key={idx} style={styles.qrCodeTextURL}>
-            {qrcode.url}
+        {barcodes.map((barcode, idx) => (
+          <Text key={idx} style={styles.barcodeTextURL}>
+            {barcode.displayValue}
           </Text>
         ))}
-      </>
+      <p/>
     )
   );
 }
 
 const styles = StyleSheet.create({
-  qrCodeTextURL: {
+  barcodeTextURL: {
     fontSize: 20,
     color: 'white',
     fontWeight: 'bold',
